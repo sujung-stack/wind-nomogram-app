@@ -2,15 +2,12 @@
 import streamlit as st
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
-import matplotlib.font_manager as fm
 
 st.set_page_config(layout="centered")
 st.title("보행자 풍환경 기준 노모그램")
 
 # 나눔고딕 폰트 설정
 font_path = "NanumGothicBold.ttf"  # 로컬 또는 업로드 경로
-fontprop = fm.FontProperties(fname=font_path, size=13)
-plt.rcParams['font.family'] = fontprop.get_name()
 
 # 색상 코드 정의
 colors_nen = ['#0000FF', '#00BFFF', '#00FFFF', '#7CFC00', '#FF0000']
