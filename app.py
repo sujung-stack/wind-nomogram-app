@@ -1,4 +1,3 @@
-
 import streamlit as st
 import pandas as pd
 
@@ -44,7 +43,7 @@ if uploaded_file:
             else: return "4"
 
         def overall_eval(law, nen, mura):
-            if "E" in (law, nen) or "S2" == law or mura == "4":
+            if "E" in (law, nen) or law == "S2" or mura == "4":
                 return "위험"
             elif "D" in (law, nen) or law == "S1" or mura == "3":
                 return "주의"
@@ -57,14 +56,14 @@ if uploaded_file:
         df['Murakami 등급'] = df['풍속비'].apply(murakami_grade)
         df['종합 평가'] = df.apply(lambda row: overall_eval(row['Lawson 등급'], row['NEN8100 등급'], row['Murakami 등급']), axis=1)
 
-        # 평가 결과 표시
+        # 결과 표시
         st.subheader("📋 평가 결과 요약")
         st.dataframe(df[['지점', 'Lawson 등급', 'NEN8100 등급', 'Murakami 등급', '종합 평가']], use_container_width=True)
 
-        # CSV 다운로드
+        # 결과 CSV 다운로드
         csv_result = df.to_csv(index=False, encoding="utf-8-sig")
-        st.download_button("📥 평가 결과 CSV 다운로드", data=csv_result, file_name="wind_evaluation_result.csv", mime="text/csv")
+        st.download_button("📥 결과 CSV 다운로드", data=csv_result, file_name="wind_evaluation_result.csv", mime="text/csv")
 
-        # 노모그램 시각화
+        # 노모그램 이미지 표시 (정확한 파일명 사용!)
         st.subheader("🧭 노모그램 시각화")
         st.image("nomogram_background.png", caption="Lawson / NEN8100 / Murakami 기준 등급 비교", use_container_width=True)
