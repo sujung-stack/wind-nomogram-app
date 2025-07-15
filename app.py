@@ -1,107 +1,66 @@
-import streamlit as st
-import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 import matplotlib.font_manager as fm
-import numpy as np
+import pandas as pd
+import streamlit as st
 import os
 
-# 페이지 설정
-st.set_page_config(page_title="풍환경 종합 안전평가", layout="wide")
+# 한글 폰트 설정 (NanumGothic이 존재할 경우)
+font_path = "/mnt/data/NanumGothicBold.ttf"
+if os.path.exists(font_path):
+    fontprop = fm.FontProperties(fname=font_path, size=12)
+    plt.rcParams['font.family'] = fontprop.get_name()
+else:
+    plt.rcParams['font.family'] = 'DejaVu Sans'
 
-# 제목
+# 앱 제목
 st.title("📊 평가 결과 요약")
 
 # CSV 업로드
-uploaded_file = st.file_uploader("CSV 파일을 업로드하세요", type=["csv"])
+uploaded_file = st.file_uploader("CSV 파일을 업로드하세요", type="csv")
+
 if uploaded_file:
     df = pd.read_csv(uploaded_file)
     st.dataframe(df)
+    st.download_button("📥 결과 CSV 다운로드", data=uploaded_file, file_name="result.csv")
 
-    # CSV 다운로드 버튼
-    csv = df.to_csv(index=False).encode("utf-8-sig")
-    st.download_button(
-        label="📥 결과 CSV 다운로드",
-        data=csv,
-        file_name='evaluation_result.csv',
-        mime='text/csv',
-    )
-
-    st.markdown("## 🧭 노모그램 시각화")
-
-    # 폰트 설정
-    try:
-        font_path = "NanumGothic.ttf"
-        fontprop = fm.FontProperties(fname=font_path)
-        plt.rcParams['font.family'] = fontprop.get_name()
-    except Exception as e:
-        st.warning(f"폰트 로드 실패: {e}")
-        plt.rcParams['font.family'] = 'sans-serif'
-
-    # 색상 설정
-    colors = {
-        'A': '#0000FF',  # 파랑
-        'B': '#3399FF',  # 하늘
-        'C': '#00FFFF',  # 청록
-        'D': '#7CFC00',  # 연두
-        'E': '#FF0000',  # 빨강
-    }
-
-    murakami_colors = ['#0000FF', '#3399FF', '#00FFFF', '#7CFC00', '#FF0000']
-    lawson_colors = ['#0000FF', '#3399FF', '#00FFFF', '#7CFC00', '#FFFF00', '#FFA500', '#FF0000']
-    nen_colors = ['#0000FF', '#3399FF', '#00FFFF', '#7CFC00', '#FF0000']
+    st.subheader("🧭 노모그램 시각화")
 
     # 기준 등급 정의
-    nen_levels = ['A', 'B', 'C', 'D', 'E']
-    lawson_levels = ['A', 'B', 'C', 'D', 'E', 'S1', 'S2']
-    murakami_levels = ['1', '2', '3', '4']
+    levels = {
+        'Lawson 등급': ['A', 'B', 'C', 'D', 'E'],
+        'NEN8100 등급': ['A', 'B', 'C', 'D', 'E'],
+        'Murakami 등급': [1, 2, 3, 4, 5]
+    }
 
-    # 시각화
-    fig, ax = plt.subplots(figsize=(9, 8))
+    # 색상 정의
+    colors = ['#0000FF', '#00BFFF', '#00FFFF', '#7CFC00', '#FF0000']  # Blue → Red
 
-    # 막대 너비
-    bar_width = 0.2
+    fig, ax = plt.subplots(figsize=(8, 10))
+    bar_width = 0.5
 
-    # NEN8100
-    for i, level in enumerate(nen_levels):
-        ax.add_patch(patches.Rectangle((0, i / len(nen_levels)), bar_width, 1 / len(nen_levels), color=colors[level]))
+    # 기준별 컬럼 생성
+    for i, (label, grade_list) in enumerate(levels.items()):
+        for j, grade in enumerate(grade_list):
+            ax.add_patch(patches.Rectangle((i - bar_width / 2, j / 5), bar_width, 0.2, color=colors[j]))
+        ax.text(i, 1.05, label, ha='center', fontsize=15, weight='bold')
 
-    # Lawson
-    for i in range(len(lawson_levels)):
-        ax.add_patch(patches.Rectangle((0.4, i / len(lawson_levels)), bar_width, 1 / len(lawson_levels), color=lawson_colors[i]))
-
-    # Murakami
-    for i in range(len(murakami_levels)):
-        ax.add_patch(patches.Rectangle((0.8, i / len(murakami_levels)), bar_width, 1 / len(murakami_levels), color=murakami_colors[i]))
-
-    # 등급 기준 텍스트
-    ax.text(0.05, 1.02, "NEN8100 (%)", fontsize=10)
-    ax.text(0.45, 1.02, "Lawson 2001 (m/s)", fontsize=10)
-    ax.text(0.85, 1.02, "Murakami (V/V∞)", fontsize=10)
-
-    # 지점별 점선 그리기
-    for idx, row in df.iterrows():
+    # 지점별 라인 및 레이블
+    for _, row in df.iterrows():
         try:
-            nen_idx = nen_levels.index(row['NEN8100 등급'])
-            lawson_idx = lawson_levels.index(row['Lawson 등급'])
-            murakami_idx = murakami_levels.index(str(row['Murakami 등급']))
+            nen_idx = levels['NEN8100 등급'].index(row['NEN8100 등급'])
+            lawson_idx = levels['Lawson 등급'].index(row['Lawson 등급'])
+            murakami_idx = levels['Murakami 등급'].index(int(row['Murakami 등급']))
+        except Exception:
+            continue
 
-            # y 위치
-            y_nen = (nen_idx + 0.5) / len(nen_levels)
-            y_lawson = (lawson_idx + 0.5) / len(lawson_levels)
-            y_murakami = (murakami_idx + 0.5) / len(murakami_levels)
+        y_pts = [nen_idx / 5 + 0.1, lawson_idx / 5 + 0.1, murakami_idx / 5 + 0.1]
+        ax.plot([0, 1, 2], y_pts, linestyle='--', linewidth=2, color='gray')
 
-            # 점선 연결
-            ax.plot([0.1, 0.5, 0.9], [y_nen, y_lawson, y_murakami], linestyle='--', color='gray', linewidth=2)
+        # 마지막 막대 오른쪽에 텍스트
+        ax.text(2.2, y_pts[2], row['지점'], fontsize=11, va='center', weight='bold')
 
-            # 지점 이름은 막대 옆으로
-            ax.text(0.93, y_murakami, row['지점'], fontsize=11, verticalalignment='center', fontproperties=fontprop)
-
-        except Exception as e:
-            st.error(f"{row['지점']} 시각화 오류: {e}")
-
-    ax.set_xlim(0, 1.2)
-    ax.set_ylim(0, 1.05)
+    ax.set_xlim(-0.5, 2.8)
+    ax.set_ylim(0, 1.1)
     ax.axis('off')
-
-    st.pyplot(fig)
+    st.pyplot(fig, use_container_width=False)
